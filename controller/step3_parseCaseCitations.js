@@ -16,56 +16,56 @@ const run = (connection, cb) => {
 	// this wont scale but rewrite in sql later cos we cant be fucked right now
 	connection.query(
 		"select * from cases ; select * from case_citations",
-		function(err, results, fields) {
+		function (err, results, fields) {
 			if (err) {
 				cb(err);
 				return;
 			}
 
-			var allCases = results[0];
-			var allCitations = results[1];
+			let allCases = results[0];
+			let allCitations = results[1];
 
-			var insertQueries = [];
+			let insertQueries = [];
 
 			function findCaseByCitation(citation) {
-				return allCitations.find(function(row) {
+				return allCitations.find((row) => {
 					return row.citation === citation;
 				});
 			}
 
-			allCases.forEach(function(row) {
+			allCases.forEach((row) => {
 				// if no text, quit
 				if (!row.case_text) {
 					return;
 				}
 				// regex match for all double citations inside case text
-				var citationsMatch = row.case_text.match(regDoubleCites);
+				let citationsMatch = row.case_text.match(regDoubleCites);
 				// if match:
 				if (citationsMatch) {
 					// split into first and second citation
-					var separatedCitations = citationsMatch[0].split(
+					let separatedCitations = citationsMatch[0].split(
 						commaOrSemi
 					);
 					// separatedCitations[0] has first of double citation
 					// separatedCitations[1] has second of double citation
 					// we want to search for first citation to see if it is in the db already
-					var citation = separatedCitations[0];
-					var foundCase = findCaseByCitation(citation);
+					let citation = separatedCitations[0];
+					let foundCase = findCaseByCitation(citation);
 					if (foundCase) {
 						// if there's a match - ie if the first citation is in the db, then we know we can add another citation that refers to the same case
 						insertQueries.push(
 							"insert into case_citations (case_id, citation) values ('" +
-								foundCase.case_id +
-								"', '" +
-								separatedCitations[1].trim() +
-								"')"
+							foundCase.case_id +
+							"', '" +
+							separatedCitations[1].trim() +
+							"')"
 						);
 					}
 				}
 			});
 			console.log("Insert", insertQueries.length);
 			if (insertQueries.length > 0) {
-				connection.query(insertQueries.join(";"), function(
+				connection.query(insertQueries.join(";"), function (
 					err,
 					results,
 					fields

@@ -19,38 +19,38 @@ const citation_reg = /((?:\[\d{4}\]\s*)(?:([a-zA-Z]{1,7}))(?:\s*(\w{1,6})))[,;.\
 //const old_citation_reg = /\[[0-9]{4}\]\s[a-zA-Z]{1,7}\s*(\w{0,6})[,;.\s]/g
 const moment = require('moment')
 const run = (connection, cb) => {
-	var start = moment().unix()
+	const start = moment().unix()
 	console.log("Parse case to case");
 	console.log("started at " + start)
 	connection.query(
 		"select id, case_text from cases; select citation, case_id from case_citations",
-		function (err, results, fields) {
+		(err, results, fields) => {
 			if (err) {
 				cb(err);
 				return;
 			}
 			console.log("fetched tables in: " + (moment().unix() - start) + " secs")
 
-			var allCases = results[0];
-			var allCitations = results[1];
+			let allCases = results[0];
+			let allCitations = results[1];
 
-			var insertQueries = [];
+			let insertQueries = [];
 
 			// initialize map of citation strings
-			var case_citations = {};
+			let case_citations = {};
 			console.log("started matching")
 			/** 
 			 * Loop over cases, pull out all citations
 			 * 
 			 */
-			var totalcites = 0;
-			allCases.forEach(function (caseRow) {
+			let totalcites = 0;
+			allCases.forEach((caseRow) => {
 				// go through each case, check for blank text
 				if (!caseRow.case_text) {
 					return;
 				}
 				// regex searches for the format of a citation, grabs all valid sitations and maps them under the id of the case
-				var matches = caseRow.case_text.match(citation_reg);
+				let matches = caseRow.case_text.match(citation_reg);
 
 				// create map entry with key as the ID, all citations as body
 				if (matches) {
@@ -64,14 +64,14 @@ const run = (connection, cb) => {
 
 			// assuming no blank text, inside each case look at all citation records in the db
 			// see if any citations in the db are present in the case text
-			for (var key in case_citations) {
-				var count = 0;
+			for (let key in case_citations) {
+				let count = 0;
 
 				mapped_count = {}
 				// loop over all citations within keyed case text
 				case_citations[key].forEach((caseCitation) => {
 					// loop over all citations strings from database
-					allCitations.forEach(function (citationRow) {
+					allCitations.forEach((citationRow) => {
 						// match against caseRow.case_text, and only match if the ids are not identical (dont need to add a case's reference to itself)
 						if (citationRow.citation) {
 
@@ -82,7 +82,7 @@ const run = (connection, cb) => {
 
 							// if the citation is a substring of multiple other cases, we need to account for this by "ending"
 							// the citation with a semicolon ;
-							var w = citationRow.citation.concat(";");
+							let w = citationRow.citation.concat(";");
 							w = w.replace(/\s/g, '')
 
 							// map the count udner its case_id - can add to this if it encounters this ID again
@@ -105,7 +105,7 @@ const run = (connection, cb) => {
 
 				});
 				// replace current item in DB
-				for (var count_key in mapped_count) {
+				for (let count_key in mapped_count) {
 					insertQueries.push(
 						`replace into cases_cited (case_origin, case_cited, citation_count) values ('${key}', '${count_key}', ' ${mapped_count[count_key]}')`
 					);
@@ -114,11 +114,11 @@ const run = (connection, cb) => {
 			console.log("Created insert queries in: " + (moment().unix() - start) + " secs")
 			console.log("Insert", insertQueries.length);
 			if (insertQueries.length > 0) {
-				connection.query(insertQueries.join(";"), function (
+				connection.query(insertQueries.join(";"), (
 					err,
 					results,
 					fields
-				) {
+				) => {
 					if (err) {
 						cb(err);
 						return;
